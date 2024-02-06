@@ -8,10 +8,20 @@
 #include "camera.h"
 #include "material.h"
 
+#include <opencv2/opencv.hpp>
+
 int main() {
 
 
 	hittable_list world;
+
+    cv::Mat image(100, 100, CV_8UC3, cv::Scalar(0, 0, 0));
+
+    // Draw a white circle in the center
+    // cv::circle(image, cv::Point(50, 50), 25, cv::Scalar(255, 255, 255), -1);
+
+    // Save the image as a PNG file
+    // cv::imwrite("output.png", image);
 
     auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
     world.add(make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));
