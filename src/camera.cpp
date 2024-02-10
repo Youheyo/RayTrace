@@ -1,4 +1,5 @@
 #include "camera.h"
+#include "RenderThread.h"
 
 camera::camera()
 {
@@ -8,35 +9,69 @@ camera::~camera()
 {
 }
 
-void camera::render(const hittable &world)
+void camera::render(hittable_list world)
 {
-    initialize();
 
+    std::cout << "P3\n" << image_width << ' ' << image_height << "\nMax Threads: " << this->threads << "\n";
 
-    RenderImage renderer(image_width, image_height);
+    RenderImage* image = new RenderImage(image_width, image_height);
 
-    std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+    int row = 0;
+    bool standby = true , isBusy = false;
+    std::vector<RenderThread*> rThread;
+    ShowProgress(row);
 
-    for (int j = 0; j < image_height; ++j) {
-        std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
-        for (int i = 0; i < image_width; ++i) {
-            color pixel_color(0,0,0);
-            for (int sample = 0; sample < samples_per_pixel; ++sample) {
-                ray r = get_ray(i, j);
-                pixel_color += ray_color(r, max_depth, world);
+    while(standby){
+        for(int i = 0; i < this->threads; i++){
+            if(rThread.size() < this->threads){
+                RenderThread* thread = new RenderThread(rThread.size(), image, this, &world);
+                rThread.push_back(thread);
+                thread->setRow(row);
+                thread->Start();
+                row++;
+                ShowProgress(row);
             }
-            // write_color(std::cout, pixel_color, samples_per_pixel);
+            if(!rThread[i]->isRunning()){                    // * Check if a thread is finished running
 
-            renderer.setPixel(i, j, pixel_color.x(), pixel_color.y(), pixel_color.z(), samples_per_pixel);
+                if(rThread[i]->canApplyPixels){              // * Check if a thread can apply pixels
+
+                    for(int z = 0; z < rThread.size(); z++){ // * Loop Through list of threads
+
+                        if(rThread[z]->applyingPixels){      // * Check if any are applying pixels
+                            // std::cout << rThread[i]->id << " cannot apply because " << rThread[z]->id << " using CS\n";
+                            isBusy = true;
+                            break;
+                        }
+
+                    }
+
+                    if(!isBusy){
+                        rThread[i]->applyPixels(image);      // * Apply pixels
+                        if(row < image_height){              // * Check left over rows
+                            rThread[i]->setRow(row);         // * Assign a new row then start
+                            rThread[i]->Start();
+                            row++;
+                            ShowProgress(row);
+                        }
+                        else{                               // * No more rows can be added
+                            standby = false;
+                            break;
+                        }
+                    }
+
+
+                }
+            }
         }
     }
-
+    image->saveImage(fileName);
     std::clog << "\rDone.                 \n";
-    renderer.saveImage(fileName);
 }
 
-void camera::initialize()
+void camera::initialize(int numThread)
 {
+
+    this->threads = numThread;
 
     image_height = static_cast<int>(image_width / aspect_ratio);
     image_height = (image_height < 1) ? 1 : image_height;
@@ -87,6 +122,11 @@ ray camera::get_ray(int i, int j) const
     return ray(ray_origin, ray_direction);
 }
 
+void camera::ShowProgress(int row)
+{
+    std::clog << "\rScanlines remaining: " << (image_height - row) << ' ' << std::flush;
+}
+
 point3 camera::defocus_disk_sample() const
 {
     // Returns a random point in the camera defocus disk.
@@ -102,7 +142,7 @@ vec3 camera::pixel_sample_square() const
     return (px * pixel_delta_u) + (py * pixel_delta_v);
 }
 
-color camera::ray_color(const ray &r, int depth, const hittable &world) const
+color camera::ray_color(const ray &r, int depth, const hittable_list world) const
 {
     hit_record rec;
 
