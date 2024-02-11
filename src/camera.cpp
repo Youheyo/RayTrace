@@ -42,7 +42,7 @@ void camera::render(hittable_list world)
                             isBusy = true;
                             break;
                         }
-
+                        isBusy = false;
                     }
 
                     if(!isBusy){
@@ -50,6 +50,7 @@ void camera::render(hittable_list world)
                         if(row < image_height){              // * Check left over rows
                             rThread[i]->setRow(row);         // * Assign a new row then start
                             rThread[i]->Start();
+                            isBusy = false;
                             row++;
                             ShowProgress(row);
                         }
