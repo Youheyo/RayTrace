@@ -4,7 +4,7 @@ project(RayTrace LANGUAGES CXX)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
-SET(OpenCV_DIR "C:/Users/Bryan/Downloads/OpenCV-MinGW-Build-OpenCV-4.5.5-x64")
+# SET(OpenCV_DIR "{OpenCV Directory}")
 
 find_package(OpenCV REQUIRED)
 
